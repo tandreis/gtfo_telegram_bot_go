@@ -1,3 +1,6 @@
+logger:
+  level: "info"
+
 bot:
   token: "your token"
   args: ""

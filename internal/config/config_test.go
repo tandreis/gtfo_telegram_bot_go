@@ -20,10 +20,15 @@ func TestMustLoad(t *testing.T) {
 		{
 			name: "Test 1",
 			got: `
+logger:
+  level: "debug"
 bot:
   token: "token1"
 `,
-			want: &Config{Bot: Bot{Token: "token1", MaxPolls: 1}},
+			want: &Config{
+				Logger: Logger{Level: "debug"},
+				Bot:    Bot{Token: "token1", MaxPolls: 1},
+			},
 		},
 		{
 			name: "Test 1",
@@ -32,7 +37,10 @@ bot:
   token: "token2"
   max_polls: 2
 `,
-			want: &Config{Bot: Bot{Token: "token2", MaxPolls: 2}},
+			want: &Config{
+				Logger: Logger{Level: "info"},
+				Bot:    Bot{Token: "token2", MaxPolls: 2},
+			},
 		},
 		{
 			name: "Test 1",
@@ -43,8 +51,9 @@ steam:
   api_key: "key1"
 `,
 			want: &Config{
-				Bot:   Bot{Token: "token2", MaxPolls: 1},
-				Steam: Steam{ApiKey: "key1"},
+				Logger: Logger{Level: "info"},
+				Bot:    Bot{Token: "token2", MaxPolls: 1},
+				Steam:  Steam{ApiKey: "key1"},
 			},
 		},
 		{
@@ -60,7 +69,8 @@ steam:
       tid: 1
 `,
 			want: &Config{
-				Bot: Bot{Token: "token2", MaxPolls: 1},
+				Logger: Logger{Level: "info"},
+				Bot:    Bot{Token: "token2", MaxPolls: 1},
 				Steam: Steam{
 					ApiKey: "key2",
 					Users: []User{{

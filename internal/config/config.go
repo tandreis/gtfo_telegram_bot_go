@@ -11,8 +11,13 @@ import (
 const DefaultConf = "config/config.yml"
 
 type Config struct {
+	Logger
 	Bot
 	Steam
+}
+
+type Logger struct {
+	Level string `yaml:"level" env-default:"info"`
 }
 
 type Bot struct {
