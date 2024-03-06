@@ -1,6 +1,10 @@
 logger:
   level: "info"
 
+storage:
+  type: "memory"
+  path: ""
+
 bot:
   token: "your token"
   args: ""
@@ -11,8 +15,10 @@ steam:
   api_key: "your api key"
   users:
     - name: "user1"
-      sid: "steam id 1"
-      tid: 1
+      steam_id: "steam id 1"
+      telegram_id: 1
+      chat_id: 11
     - name: "user2"
-      sid: "steam id 2"
-      tid: 2
+      steam_id: "steam id 2"
+      telegram_id: 2
+      chat_id: 12

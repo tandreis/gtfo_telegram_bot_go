@@ -23,3 +23,4 @@ go.work
 
 # Config
 config/config.yml
+.DS_Store

@@ -1,23 +1,28 @@
 package config
 
 import (
-	"log"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-const DefaultConf = "config/config.yml"
-
 type Config struct {
 	Logger
+	Storage
 	Bot
 	Steam
 }
 
 type Logger struct {
 	Level string `yaml:"level" env-default:"info"`
+}
+
+type Storage struct {
+	Type string `yaml:"type" env-required:"true"`
+	Path string `yaml:"path"`
 }
 
 type Bot struct {
@@ -28,8 +33,9 @@ type Bot struct {
 
 type User struct {
 	Name       string `yaml:"name" env-required:"true"`
-	SteamID    string `yaml:"sid" env-required:"true"`
-	TelegramID int    `yaml:"tid" env-required:"true"`
+	SteamID    string `yaml:"steam_id" env-required:"true"`
+	TelegramID int64  `yaml:"telegram_id" env-required:"true"`
+	ChatID     int64  `yaml:"chat_id" env-required:"true"`
 }
 
 type Steam struct {
@@ -37,21 +43,23 @@ type Steam struct {
 	Users  []User `yaml:"users"`
 }
 
-func MustLoad() *Config {
+// Load read config from file and returns Config struct.
+// On error returns nil and error
+func Load() (*Config, error) {
 	configPath := filepath.FromSlash(os.Getenv("CONFIG_PATH"))
 	if configPath == "" {
-		configPath = filepath.FromSlash(DefaultConf)
+		return nil, errors.New("CONFIG_PATH is not set")
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exists: %s", configPath)
+		return nil, errors.New(fmt.Sprintf("config file does not exists: %s", configPath))
 	}
 
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("cannot read config: %s", err)
+		return nil, errors.New(fmt.Sprintf("cannot read config: %s", err))
 	}
 
-	return &cfg
+	return &cfg, nil
 }
