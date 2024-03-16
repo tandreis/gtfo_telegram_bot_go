@@ -1,6 +1,6 @@
 module github.com/tandreis/gtfo_telegram_bot_go
 
-go 1.21.6
+go 1.22.1
 
 require (
 	github.com/BurntSushi/toml v1.3.2 // indirect

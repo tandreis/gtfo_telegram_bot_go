@@ -3,9 +3,11 @@ package tbot
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/tandreis/gtfo_telegram_bot_go/internal/steam"
 	strg "github.com/tandreis/gtfo_telegram_bot_go/internal/storage"
 	"go.uber.org/zap"
 )
@@ -28,6 +30,31 @@ func logMessage(next bot.HandlerFunc) bot.HandlerFunc {
 	}
 }
 
+func fmtDuration(duration time.Duration) string {
+	days := int(duration.Hours() / 24)
+	months := days / 30
+
+	if months > 0 {
+		return fmt.Sprintf("%d мес", months)
+	}
+
+	weeks := days / 7
+	if weeks > 0 {
+		return fmt.Sprintf("%d нед", weeks)
+	}
+	if days > 0 {
+		return fmt.Sprintf("%d д", days)
+	}
+
+	hours := int(duration.Hours()) % 24
+	if hours > 0 {
+		return fmt.Sprintf("%d ч", hours)
+	}
+
+	minutes := int(duration.Minutes()) % 60
+	return fmt.Sprintf("%d мин", minutes)
+}
+
 func handleCmdStart(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if update.Message == nil {
 		log.Warn("Got null update message, skipping")
@@ -38,6 +65,59 @@ func handleCmdStart(ctx context.Context, b *bot.Bot, update *models.Update) {
 		ChatID: update.Message.Chat.ID,
 		Text:   "Unsupported",
 	})
+}
+
+func handleCmdSteamStatus(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message == nil {
+		log.Warn("Got null update message, skipping")
+		return
+	}
+
+	token, err := getSteamToken(ctx)
+	if err != nil {
+		log.Error("Failed to get context", zap.Error(err))
+		return
+	}
+
+	storage, err := getStorage(ctx)
+	if err != nil {
+		log.Error("Failed to get context", zap.Error(err))
+		return
+	}
+
+	users, _ := storage.GetUsers(update.Message.Chat.ID)
+
+	var steamIDs []string
+	for _, u := range users {
+		steamIDs = append(steamIDs, u.SteamID)
+	}
+
+	steamUsers := steam.GetPlayerSummaries(token, steamIDs)
+
+	var message = "Статус игроков."
+	for _, u := range steamUsers.Response.Players {
+		if u.Online {
+			message += fmt.Sprintf("\n&#9989;<i>%s</i> сейчас <b>%s</b>.",
+				u.Name, u.StateStr)
+			if u.GameName != "" {
+				message += fmt.Sprintf(" Играет в <a href=\"%s\">%s</a>.",
+					u.GameURL, u.GameName)
+			}
+		} else {
+			message += fmt.Sprintf("\n&#10060;<i>%s</i> сейчас <b>%s</b>. (%s)",
+				u.Name, u.StateStr, fmtDuration(time.Since(time.Unix(u.LastLogoff, 0))))
+		}
+	}
+
+	b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    update.Message.Chat.ID,
+		Text:      message,
+		ParseMode: models.ParseModeHTML,
+		LinkPreviewOptions: &models.LinkPreviewOptions{
+			IsDisabled: bot.True(),
+		},
+	})
+
 }
 
 func handleCmdPoll(ctx context.Context, b *bot.Bot, update *models.Update) {

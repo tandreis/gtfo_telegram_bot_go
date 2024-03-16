@@ -8,17 +8,26 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/tandreis/gtfo_telegram_bot_go/internal/config"
-	"github.com/tandreis/gtfo_telegram_bot_go/internal/storage"
+	strg "github.com/tandreis/gtfo_telegram_bot_go/internal/storage"
 	"go.uber.org/zap"
 )
 
 var log *zap.Logger
 
 // Start performs telegram bot setup and runs it
-func Start(cfg config.Bot, zlog *zap.Logger, storage storage.Storage) error {
+func Start(cfgBot config.Bot, cfgSteam config.Steam,
+	zlog *zap.Logger, storage strg.Storage) error {
 	log = zlog
 
-	var ctxData = newCtxData(storage)
+	var ctxData = newCtxData(storage, cfgSteam.ApiKey)
+
+	for _, u := range cfgSteam.Users {
+		storage.CreateUser(u.ChatID, strg.UserEntity{
+			Name:       u.Name,
+			SteamID:    u.SteamID,
+			TelegramID: u.TelegramID,
+		})
+	}
 
 	ctx := context.WithValue(context.Background(), ctxKey, ctxData)
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
@@ -30,7 +39,7 @@ func Start(cfg config.Bot, zlog *zap.Logger, storage storage.Storage) error {
 		bot.WithErrorsHandler(handleErrors),
 	}
 
-	b, err := bot.New(cfg.Token, opts...)
+	b, err := bot.New(cfgBot.Token, opts...)
 	if nil != err {
 		return err
 	}
@@ -38,6 +47,7 @@ func Start(cfg config.Bot, zlog *zap.Logger, storage storage.Storage) error {
 	re := regexp.MustCompile(`^/start( [0-9]+)?$`)
 	b.RegisterHandlerRegexp(bot.HandlerTypeMessageText, re, handleCmdStart)
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/poll", bot.MatchTypeExact, handleCmdPoll)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "/mmaster", bot.MatchTypeExact, handleCmdSteamStatus)
 
 	b.Start(ctx)
 

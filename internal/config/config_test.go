@@ -9,17 +9,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMustLoad(t *testing.T) {
+func TestLoad(t *testing.T) {
 	dir := t.TempDir()
 	confFile := path.Join(dir, "test.yaml")
 
 	err := os.Setenv("CONFIG_PATH", confFile)
 	require.NoError(t, err)
 
+	type result struct {
+		cfg *Config
+		err bool
+	}
 	tests := []struct {
 		name string
 		got  string
-		want *Config
+		want result
 	}{
 		{
 			name: "Test 1",
@@ -32,10 +36,13 @@ storage:
 bot:
   token: "token1"
 `,
-			want: &Config{
-				Logger:  Logger{Level: "debug"},
-				Storage: Storage{Type: "db", Path: "/tmp/file.db"},
-				Bot:     Bot{Token: "token1", MaxPolls: 1},
+			want: result{
+				cfg: &Config{
+					Logger:  Logger{Level: "debug"},
+					Storage: Storage{Type: "db", Path: "/tmp/file.db"},
+					Bot:     Bot{Token: "token1", MaxPolls: 1},
+				},
+				err: false,
 			},
 		},
 		{
@@ -47,10 +54,13 @@ bot:
   token: "token2"
   max_polls: 2
 `,
-			want: &Config{
-				Logger:  Logger{Level: "info"},
-				Storage: Storage{Type: "memory", Path: ""},
-				Bot:     Bot{Token: "token2", MaxPolls: 2},
+			want: result{
+				cfg: &Config{
+					Logger:  Logger{Level: "info"},
+					Storage: Storage{Type: "memory", Path: ""},
+					Bot:     Bot{Token: "token2", MaxPolls: 2},
+				},
+				err: false,
 			},
 		},
 		{
@@ -63,11 +73,14 @@ bot:
 steam:
   api_key: "key1"
 `,
-			want: &Config{
-				Logger:  Logger{Level: "info"},
-				Storage: Storage{Type: "memory", Path: ""},
-				Bot:     Bot{Token: "token2", MaxPolls: 1},
-				Steam:   Steam{ApiKey: "key1"},
+			want: result{
+				cfg: &Config{
+					Logger:  Logger{Level: "info"},
+					Storage: Storage{Type: "memory", Path: ""},
+					Bot:     Bot{Token: "token2", MaxPolls: 1},
+					Steam:   Steam{ApiKey: "key1"},
+				},
+				err: false,
 			},
 		},
 		{
@@ -85,20 +98,28 @@ steam:
       telegram_id: 1
       chat_id: 123
 `,
-			want: &Config{
-				Logger:  Logger{Level: "info"},
-				Storage: Storage{Type: "memory", Path: ""},
-				Bot:     Bot{Token: "token2", MaxPolls: 1},
-				Steam: Steam{
-					ApiKey: "key2",
-					Users: []User{{
-						Name:       "user1",
-						SteamID:    "sid1",
-						TelegramID: 1,
-						ChatID:     123,
-					}},
+			want: result{
+				cfg: &Config{
+					Logger:  Logger{Level: "info"},
+					Storage: Storage{Type: "memory", Path: ""},
+					Bot:     Bot{Token: "token2", MaxPolls: 1},
+					Steam: Steam{
+						ApiKey: "key2",
+						Users: []User{{
+							Name:       "user1",
+							SteamID:    "sid1",
+							TelegramID: 1,
+							ChatID:     123,
+						}},
+					},
 				},
+				err: false,
 			},
+		},
+		{
+			name: "Test bad config",
+			got:  "",
+			want: result{err: true},
 		},
 	}
 
@@ -107,8 +128,31 @@ steam:
 			err := os.WriteFile(confFile, []byte(tt.got), 0664)
 			require.NoError(t, err)
 
-			got := MustLoad()
-			assert.Equal(t, got, tt.want)
+			got, err := Load()
+
+			if tt.want.err {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, got, tt.want.cfg)
+			}
+
 		})
 	}
+}
+
+func TestLoad_NotFound(t *testing.T) {
+	err := os.Setenv("CONFIG_PATH", "!bad file path!")
+	require.NoError(t, err)
+
+	_, err = Load()
+	assert.Error(t, err)
+}
+
+func TestLoad_NoConf(t *testing.T) {
+	err := os.Setenv("CONFIG_PATH", "")
+	require.NoError(t, err)
+
+	_, err = Load()
+	assert.Error(t, err)
 }

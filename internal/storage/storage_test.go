@@ -24,7 +24,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "Test memory",
 			args: args{storageType: "memory", storagePath: ""},
-			want: result{storage: &MemStorage{}, err: nil},
+			want: result{storage: &memStorage{}, err: nil},
 		},
 		{
 			name: "Test bad",

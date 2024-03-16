@@ -1,6 +1,8 @@
 package main
 
 import (
+	dlog "log"
+
 	"github.com/tandreis/gtfo_telegram_bot_go/internal/config"
 	"github.com/tandreis/gtfo_telegram_bot_go/internal/logger"
 	"github.com/tandreis/gtfo_telegram_bot_go/internal/storage"
@@ -9,7 +11,11 @@ import (
 )
 
 func main() {
-	cfg := config.MustLoad()
+	cfg, err := config.Load()
+	if err != nil {
+		dlog.Fatal(err)
+	}
+
 	log := logger.MustInit(cfg.Logger.Level)
 	defer log.Sync()
 
@@ -20,7 +26,7 @@ func main() {
 
 	log.Info("Starting GTFO Telegram Bot")
 
-	if err := tbot.Start(cfg.Bot, log, storage); err != nil {
+	if err := tbot.Start(cfg.Bot, cfg.Steam, log, storage); err != nil {
 		log.Error("Error while running tbot", zap.Error(err))
 	}
 }

@@ -1,14 +1,13 @@
 package config
 
 import (
-	"log"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
-
-const DefaultConf = "config/config.yml"
 
 type Config struct {
 	Logger
@@ -44,22 +43,23 @@ type Steam struct {
 	Users  []User `yaml:"users"`
 }
 
-// MustLoad loads config into Config struct and returns it
-func MustLoad() *Config {
+// Load read config from file and returns Config struct.
+// On error returns nil and error
+func Load() (*Config, error) {
 	configPath := filepath.FromSlash(os.Getenv("CONFIG_PATH"))
 	if configPath == "" {
-		configPath = filepath.FromSlash(DefaultConf)
+		return nil, errors.New("CONFIG_PATH is not set")
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exists: %s", configPath)
+		return nil, errors.New(fmt.Sprintf("config file does not exists: %s", configPath))
 	}
 
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("cannot read config: %s", err)
+		return nil, errors.New(fmt.Sprintf("cannot read config: %s", err))
 	}
 
-	return &cfg
+	return &cfg, nil
 }
